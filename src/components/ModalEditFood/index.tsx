@@ -1,5 +1,5 @@
 import React, { useRef, useCallback } from 'react';
-
+import * as Yup from 'yup';
 import { FiCheckSquare } from 'react-icons/fi';
 import { FormHandles } from '@unform/core';
 import { Form } from './styles';
@@ -29,6 +29,10 @@ interface IEditFoodData {
   description: string;
 }
 
+interface IErrors {
+  [key: string]: string;
+}
+
 const ModalEditFood: React.FC<IModalProps> = ({
   isOpen,
   setIsOpen,
@@ -39,7 +43,36 @@ const ModalEditFood: React.FC<IModalProps> = ({
 
   const handleSubmit = useCallback(
     async (data: IEditFoodData) => {
-      // EDIT A FOOD PLATE AND CLOSE THE MODAL
+      try {
+        formRef.current?.setErrors({});
+
+        const schema = Yup.object().shape({
+          image: Yup.string()
+            .url('url inválida')
+            .required('Imagem obrigatória'),
+          name: Yup.string().required('Nome obrigatório'),
+          price: Yup.string().required('Valor obrigatório'),
+          description: Yup.string().required('Descrição obrigatória'),
+        });
+
+        await schema.validate(data, {
+          abortEarly: false,
+        });
+
+        handleUpdateFood(data);
+
+        setIsOpen();
+      } catch (err) {
+        if (err instanceof Yup.ValidationError) {
+          const validationErrors: IErrors = {};
+
+          err.inner.forEach(error => {
+            if (error.path) validationErrors[error.path] = error.message;
+          });
+
+          formRef.current?.setErrors(validationErrors);
+        }
+      }
     },
     [handleUpdateFood, setIsOpen],
   );
